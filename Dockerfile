@@ -5,6 +5,10 @@ MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
 ENV SBCL_VERSION 1.3.16
 
+ENV QUICKLISP_HOME /opt/quicklisp
+
+ENV XDG_CACHE_HOME /cache
+
 RUN opkg update &&\
     opkg install \
          gcc \
@@ -23,6 +27,11 @@ RUN opkg update &&\
     rm /tmp/opkg-lists/* &&\
     rm -rf /sbcl-${SBCL_VERSION}-x86-64-linux-binary.tar /sbcl-${SBCL_VERSION}-x86-64-linux &&\
     wget -O /tmp/quicklisp.lisp https://beta.quicklisp.org/quicklisp.lisp &&\
-    echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install)' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)'
+    mkdir /opt &&\
+    mkdir -p /common-lisp &&\
+    mkdir -p /usr/share/common-lisp  &&\
+    mkdir -p $XDG_CACHE_HOME &&\
+    ln -s /common-lisp /usr/share/common-lisp/source &&\
+    echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)'
 
 CMD ["sbcl"]
