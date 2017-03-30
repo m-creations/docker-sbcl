@@ -3,7 +3,7 @@
 FROM mcreations/openwrt-x64
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
-ENV SBCL_VERSION 1.2.11
+ENV SBCL_VERSION 1.3.16
 
 RUN opkg update &&\
     opkg install \
