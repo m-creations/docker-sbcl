@@ -3,13 +3,13 @@
 FROM mcreations/openwrt-x64
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
-ENV SBCL_VERSION 1.3.16
+ENV SBCL_VERSION 1.3.16-3-g318f311~yakkety+5
 
-ENV DOWNLOAD_URL http://prdownloads.sourceforge.net/sbcl
+ENV DOWNLOAD_URL https://launchpad.net/~darabi/+archive/ubuntu/lisp/+files
 
-ENV DOWNLOAD_PACKAGE sbcl-${SBCL_VERSION}-x86-64-linux-binary.tar.bz2
+ENV DOWNLOAD_PACKAGE sbcl_${SBCL_VERSION}_amd64.deb
 
-ENV SHA256_SUM 5ae49b7a6861781ef5f70eacfb4b423b79b5c7e7f8b1ddd6e40e7bcea96f026b
+ENV SHA256_SUM 95654ba25040fce3e01cad56c01024122c0b245097eff4d3be5d0c69c14656bd
 
 ENV QUICKLISP_HOME /opt/quicklisp
 
@@ -17,21 +17,22 @@ ENV XDG_CACHE_HOME /cache
 
 RUN opkg update &&\
     opkg install \
+         ar \
          coreutils-sha256sum \
          gcc \
          make \
+         tar \
+         xz \
          zoneinfo-core &&\
     rm /etc/localtime &&\
     ln -s /usr/share/zoneinfo/UTC /etc/localtime &&\
     cd /tmp &&\
     wget --progress=dot:giga $DOWNLOAD_URL/$DOWNLOAD_PACKAGE &&\
     echo "$SHA256_SUM $DOWNLOAD_PACKAGE" | sha256sum -c &&\
-    bunzip2 sbcl-${SBCL_VERSION}-x86-64-linux-binary.tar.bz2 &&\ 
-    tar xvf sbcl-${SBCL_VERSION}-x86-64-linux-binary.tar &&\
-    cd sbcl-${SBCL_VERSION}-x86-64-linux &&\
-    INSTALL_ROOT=/usr sh install.sh &&\
-    mkdir -p /usr/local/lib &&\
-    ln -s /usr/lib/sbcl /usr/local/lib/sbcl &&\
+    mkdir sbcl-unpack && cd sbcl-unpack &&\
+    ar x ../$DOWNLOAD_PACKAGE &&\
+    tar xfvJ /tmp/sbcl-unpack/data.tar.xz -C / &&\
+    rm -rf /usr/share/{man,doc,lintian,binfmts} &&\
     rm -rf /tmp/sbcl* &&\
     rm /tmp/opkg-lists/* &&\
     cd ~ &&\
