@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# set -x
+
+IFS=':' read -ra user_group <<< "$RUN_AS"
+
+userid=${user_group[0]}
+groupid=${user_group[1]}
+
+# Add the user, if s/he does not exist (we do NOT check the group!)
+
+if ! id -nu $userid &> /dev/null ; then
+    groupadd -g $groupid lisp
+    useradd -g $groupid -u $userid -m lisp
+fi
+
+function ensure_ownership () {
+    local dir=$1
+    if [[ "$(stat -c '%u' $dir)" != $userid || "$(stat -c '%g' $dir)" != $groupid ]] ; then
+        chown $userid:$groupid $dir -R
+    fi
+}
+
+ensure_ownership /opt/quicklisp
+ensure_ownership /cache
+
+ARGS=""
+read -ra args <<< "$@"
+
+if [ ${#args} -gt 0 ] ; then
+    echo Arguments:
+    for a in "${args[@]}"; do
+        echo     $a
+    done
+fi
+
+cat <<EOF
+
+In our experience, you can safely ignore the following warning about
+personality flags, if your code works in this Docker image.
+
+You can read more about it at
+
+https://github.com/dimitri/pgloader/wiki/Running-in-Docker-%28SBCL-warning%29
+
+EOF
+
+
+exec gosu $RUN_AS "sbcl-binary" --load /opt/quicklisp/setup.lisp "$@"
