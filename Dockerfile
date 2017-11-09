@@ -15,18 +15,32 @@ ENV QUICKLISP_HOME /opt/quicklisp
 
 ENV XDG_CACHE_HOME /cache
 
+ENV GOSU_VERSION 1.10
+
+# userid:groupid to run sbcl with
+ENV RUN_AS 1000:1000
+
 RUN opkg update &&\
-    opkg install \
+    opkg install --force-overwrite \
          ar \
+         coreutils-id \
          coreutils-sha256sum \
+         coreutils-stat \
          gcc \
          make \
+         shadow-groupadd \
+         shadow-su \
+         shadow-useradd \
          tar \
          xz \
          zoneinfo-core &&\
     rm /etc/localtime &&\
     ln -s /usr/share/zoneinfo/UTC /etc/localtime &&\
+    mkdir /home &&\
     cd /tmp &&\
+    wget -O gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" &&\
+    chmod a+x gosu &&\
+    mv gosu /usr/bin &&\
     wget --progress=dot:giga $DOWNLOAD_URL/$DOWNLOAD_PACKAGE &&\
     echo "$SHA256_SUM $DOWNLOAD_PACKAGE" | sha256sum -c &&\
     mkdir sbcl-unpack && cd sbcl-unpack &&\
@@ -43,6 +57,9 @@ RUN opkg update &&\
     mkdir -p /usr/share/common-lisp  &&\
     mkdir -p $XDG_CACHE_HOME &&\
     ln -s /common-lisp /usr/share/common-lisp/source &&\
-    echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)'
+    echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)' &&\
+    mv /usr/bin/sbcl /usr/bin/sbcl-binary
 
-CMD ["sbcl"]
+ADD image/root/start-sbcl /usr/bin/sbcl
+
+ENTRYPOINT ["sbcl"]
