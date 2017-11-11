@@ -38,7 +38,7 @@ RUN opkg update &&\
     ln -s /usr/share/zoneinfo/UTC /etc/localtime &&\
     mkdir /home &&\
     cd /tmp &&\
-    wget -O gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" &&\
+    wget -O gosu --progress=dot:giga "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" &&\
     chmod a+x gosu &&\
     mv gosu /usr/bin &&\
     wget --progress=dot:giga $DOWNLOAD_URL/$DOWNLOAD_PACKAGE &&\
