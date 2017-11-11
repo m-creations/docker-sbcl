@@ -46,4 +46,4 @@ https://github.com/dimitri/pgloader/wiki/Running-in-Docker-%28SBCL-warning%29
 EOF
 
 
-exec gosu $RUN_AS "sbcl-binary" --load /opt/quicklisp/setup.lisp "$@"
+exec gosu $RUN_AS rlwrap sbcl-binary --load /opt/quicklisp/setup.lisp "$@"
