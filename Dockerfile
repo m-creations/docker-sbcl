@@ -28,6 +28,7 @@ RUN opkg update &&\
          coreutils-stat \
          gcc \
          make \
+         rlwrap \
          shadow-groupadd \
          shadow-su \
          shadow-useradd \

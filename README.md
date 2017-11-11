@@ -52,6 +52,12 @@ to match the value of `RUN_AS`.
 Note that this will take quite some time, so you should always run the
 image with the same `RUN_AS` value (cf. above).
 
+Readline support
+----------------
+
+When running the image interactively, you can use [GNU readline](https://directory.fsf.org/wiki/Readline)
+history and editing capabilities.
+
 Github Repo
 -----------
 
