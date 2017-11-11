@@ -3,13 +3,13 @@
 FROM mcreations/openwrt-x64
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
-ENV SBCL_VERSION 1.3.16-3-g318f311~yakkety+5
+ENV SBCL_VERSION 1.4.1-1
 
-ENV DOWNLOAD_URL https://launchpad.net/~darabi/+archive/ubuntu/lisp/+files
+ENV DOWNLOAD_URL http://ftp.de.debian.org/debian/pool/main/s/sbcl
 
 ENV DOWNLOAD_PACKAGE sbcl_${SBCL_VERSION}_amd64.deb
 
-ENV SHA256_SUM 95654ba25040fce3e01cad56c01024122c0b245097eff4d3be5d0c69c14656bd
+ENV SHA256_SUM f4a53f3f6742857ffc6855185d3985c8ca3dc94ec14964d749c7f12cb76611ce
 
 ENV QUICKLISP_HOME /opt/quicklisp
 
