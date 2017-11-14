@@ -4,11 +4,19 @@ docker-sbcl
 An image based on [OpenWrt](http://openwrt.org) x86_64 which runs
 [SBCL (Steel Bank Common Lisp)](http://sbcl.org).
 
-[Quicklisp](https://quicklisp.org) is installed in /opt/quicklisp, but
-it is an 'empty' quicklisp installation. If you want an image with a
-complete quicklisp distribution, please check
+[Quicklisp](https://quicklisp.org) is installed in /opt/quicklisp. We provide
+different versions (tags) for different distributions of Quicklisp:
 
-https://hub.docker.com/r/mcreations/sbcl-ql
+- version `x.y.z` contains the corresponding sbcl version (built with
+  build option 'fancy'), and the 'current' Quicklisp version (current
+  at container build time) with no systems pre-installed
+
+- version `x.y.z-YYYY-MM-DD` contains sbcl `x.y.z` and Quicklisp
+  `YYYY-MM-DD`, where all package archives are downloaded into the
+  image
+
+The latter image is large (400-500 MB) but contains all of Quicklisp,
+so no Internet connectivity is needed for `quickload`ing systems.
 
 Sources can be mounted into the image into /common-lisp.
 
