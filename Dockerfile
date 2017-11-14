@@ -13,6 +13,8 @@ ENV SHA256_SUM f4a53f3f6742857ffc6855185d3985c8ca3dc94ec14964d749c7f12cb76611ce
 
 ENV QUICKLISP_HOME /opt/quicklisp
 
+ENV QUICKLISP_VERSION 2017-10-23
+
 ENV XDG_CACHE_HOME /cache
 
 ENV GOSU_VERSION 1.10
@@ -59,6 +61,8 @@ RUN opkg update &&\
     mkdir -p $XDG_CACHE_HOME &&\
     ln -s /common-lisp /usr/share/common-lisp/source &&\
     echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)' &&\
+    echo | sbcl --load /opt/quicklisp/setup.lisp --eval "(ql-dist:install-dist \"http://beta.quicklisp.org/dist/quicklisp/$QUICKLISP_VERSION/distinfo.txt\" :replace t)" \
+         --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"quicklisp\"))))" &&\
     mv /usr/bin/sbcl /usr/bin/sbcl-binary
 
 ADD image/root/start-sbcl /usr/bin/sbcl
