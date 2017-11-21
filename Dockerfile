@@ -29,6 +29,8 @@ RUN opkg update &&\
          coreutils-sha256sum \
          coreutils-stat \
          gcc \
+         graphviz \
+         libfixposix libfixposix-dev \
          make \
          rlwrap \
          shadow-groupadd \
