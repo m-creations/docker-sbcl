@@ -28,6 +28,7 @@ RUN opkg update &&\
          coreutils-stat \
          gcc \
          graphviz \
+         libffi \
          libfixposix libfixposix-dev \
          libuv libuv-dev \
          make \
