@@ -31,6 +31,7 @@ RUN opkg update &&\
          gcc \
          graphviz \
          libfixposix libfixposix-dev \
+         libuv libuv-dev \
          make \
          rlwrap \
          shadow-groupadd \
