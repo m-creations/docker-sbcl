@@ -22,6 +22,10 @@ ENV GOSU_VERSION 1.10
 # userid:groupid to run sbcl with
 ENV RUN_AS 1000:1000
 
+# contains the start-sbcl script and a
+# patch for quicklisp-client's mtime handling
+ADD image/root/ /
+
 RUN opkg update &&\
     opkg install --force-overwrite \
          ar \
@@ -70,8 +74,8 @@ RUN opkg update &&\
          --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"quicklisp\"))))" &&\
     cd /opt/quicklisp &&\
     patch -p 1 < /tmp/001-minitar-set-file-mtime.patch &&\
-    mv /usr/bin/ sbcl /usr/bin/sbcl-binary
+    mv /usr/bin/sbcl /usr/bin/sbcl-binary &&\
+    mv /usr/bin/start-sbcl /usr/bin/sbcl
 
-ADD image/root/start-sbcl /usr/bin/sbcl
 
 ENTRYPOINT ["sbcl"]
