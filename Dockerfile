@@ -32,6 +32,7 @@ RUN opkg update &&\
          libfixposix libfixposix-dev \
          libuv libuv-dev \
          make \
+         patch \
          rlwrap \
          shadow-groupadd \
          shadow-su \
@@ -63,7 +64,9 @@ RUN opkg update &&\
     mkdir -p $XDG_CACHE_HOME &&\
     ln -s /common-lisp /usr/share/common-lisp/source &&\
     echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)' &&\
-    mv /usr/bin/sbcl /usr/bin/sbcl-binary
+    cd /opt/quicklisp &&\
+    patch -p 1 < /tmp/001-minitar-set-file-mtime.patch &&\
+    mv /usr/bin/ sbcl /usr/bin/sbcl-binary
 
 ADD image/root/start-sbcl /usr/bin/sbcl
 
