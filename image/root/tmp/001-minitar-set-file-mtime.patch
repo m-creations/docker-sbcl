@@ -1,0 +1,87 @@
+diff --git a/quicklisp/impl-util.lisp b/quicklisp/impl-util.lisp
+index 216c654..0272c36 100644
+--- a/quicklisp/impl-util.lisp
++++ b/quicklisp/impl-util.lisp
+@@ -174,6 +174,21 @@ quicklisp at CL startup."
+   (:implementation clisp
+     (nth-value 2 (ql-clisp:probe-pathname pathname))))
+ 
++;;;
++;;; Set file date
++;;;
++
++(definterface set-file-date (pathname access-time modification-time)
++  (:documentation "Set the access and modification time of the file designated
++  by PATHNAME as a unix time (seconds since 1970-01-01).")
++  (:implementation t
++    t)
++  (:implementation allegro
++                   (ql-allegro:utime pathname
++                                     (ql-allegro:unix-to-universal-time access-time)
++                                     (ql-allegro:unix-to-universal-time modification-time)))
++  (:implementation sbcl
++    (ql-sbcl:utime pathname access-time modification-time)))
+ 
+ ;;;
+ ;;; Deleting a directory tree
+@@ -337,4 +352,3 @@ potentially dead symlinks."
+           (if (directoryp entry)
+               (push entry directories-to-process)
+               (funcall fun entry)))))))
+-
+diff --git a/quicklisp/impl.lisp b/quicklisp/impl.lisp
+index 94e0358..16883ac 100644
+--- a/quicklisp/impl.lisp
++++ b/quicklisp/impl.lisp
+@@ -132,8 +132,13 @@
+   (:documentation
+    "Allegro Common Lisp - http://www.franz.com/products/allegrocl/")
+   (:class allegro)
++  (:prep
++   (require :osi))
+   (:reexport-from #:socket
+                   #:make-socket)
++  (:reexport-from #:excl.osi
++                  #:unix-to-universal-time
++                  #:utime)
+   (:reexport-from #:excl
+                   #:file-directory-p
+                   #:delete-directory
+@@ -289,7 +294,8 @@
+    (require 'sb-bsd-sockets))
+   (:intern #:host-network-address)
+   (:reexport-from #:sb-posix
+-                  #:rmdir)
++                  #:rmdir
++                  #:utime)
+   (:reexport-from #:sb-ext
+                   #:compiler-note
+                   #:native-namestring)
+diff --git a/quicklisp/minitar.lisp b/quicklisp/minitar.lisp
+index 49cde86..7282da5 100644
+--- a/quicklisp/minitar.lisp
++++ b/quicklisp/minitar.lisp
+@@ -84,6 +84,9 @@ value it specifies as multiple values."
+ (defun payload-size (header)
+   (values (parse-integer (block-asciiz-string header 124 12) :radix 8)))
+ 
++(defun payload-mtime (header)
++  (values (parse-integer (block-asciiz-string header 136 12) :radix 8)))
++
+ (defun nth-block (n file)
+   (with-open-file (stream file :element-type '(unsigned-byte 8))
+     (let ((block (make-block-buffer)))
+@@ -149,10 +152,12 @@ value it specifies as multiple values."
+                               (full-path block)))
+                 (full-path (merge-pathnames tar-path directory))
+                 (payload-size (payload-size block))
++                (payload-mtime (payload-mtime block))
+                 (block-count (ceiling (payload-size block) +block-size+)))
+          (case payload-type
+            (:file
+-            (save-file full-path payload-size stream))
++            (save-file full-path payload-size stream)
++            (ql-impl-util::set-file-date full-path payload-mtime payload-mtime))
+            (:directory
+             (ensure-directories-exist full-path))
+            ((:symlink :global-header)
