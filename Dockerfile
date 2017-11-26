@@ -34,6 +34,7 @@ RUN opkg update &&\
          libfixposix libfixposix-dev \
          libuv libuv-dev \
          make \
+         patch \
          rlwrap \
          shadow-groupadd \
          shadow-su \
@@ -67,7 +68,9 @@ RUN opkg update &&\
     echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)' &&\
     echo | sbcl --load /opt/quicklisp/setup.lisp --eval "(ql-dist:install-dist \"http://beta.quicklisp.org/dist/quicklisp/$QUICKLISP_VERSION/distinfo.txt\" :replace t)" \
          --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"quicklisp\"))))" &&\
-    mv /usr/bin/sbcl /usr/bin/sbcl-binary
+    cd /opt/quicklisp &&\
+    patch -p 1 < /tmp/001-minitar-set-file-mtime.patch &&\
+    mv /usr/bin/ sbcl /usr/bin/sbcl-binary
 
 ADD image/root/start-sbcl /usr/bin/sbcl
 
