@@ -50,6 +50,7 @@ RUN opkg update &&\
     ln -s /usr/share/zoneinfo/UTC /etc/localtime &&\
     mkdir /home &&\
     cd /tmp &&\
+    chmod 1777 . &&\
     wget -O gosu --progress=dot:giga "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" &&\
     chmod a+x gosu &&\
     mv gosu /usr/bin &&\
