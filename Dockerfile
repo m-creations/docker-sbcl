@@ -73,10 +73,10 @@ RUN opkg update &&\
     mkdir -p $XDG_CACHE_HOME &&\
     ln -s /common-lisp /usr/share/common-lisp/source &&\
     echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)' &&\
-    echo | sbcl --load /opt/quicklisp/setup.lisp --eval "(ql-dist:install-dist \"http://ql.m-creations.net/m-creations/$MCREATIONS_DIST_VERSION/distinfo.txt\" :replace t)" \
-         --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"m-creations\"))))" &&\
     echo | sbcl --load /opt/quicklisp/setup.lisp --eval "(ql-dist:install-dist \"http://beta.quicklisp.org/dist/quicklisp/$QUICKLISP_VERSION/distinfo.txt\" :replace t)" \
          --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"quicklisp\"))))" &&\
+    echo | sbcl --load /opt/quicklisp/setup.lisp --eval "(ql-dist:install-dist \"http://ql.m-creations.net/m-creations/$MCREATIONS_DIST_VERSION/distinfo.txt\" :replace t)" \
+         --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"m-creations\"))))" &&\
     cd /opt/quicklisp &&\
     patch -p 1 < /tmp/001-minitar-set-file-mtime.patch &&\
     mv /usr/bin/sbcl /usr/bin/sbcl-binary &&\
