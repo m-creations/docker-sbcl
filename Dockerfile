@@ -19,6 +19,8 @@ ENV XDG_CACHE_HOME /cache
 
 ENV GOSU_VERSION 1.10
 
+ENV CC gcc
+
 # userid:groupid to run sbcl with
 ENV RUN_AS 1000:1000
 
