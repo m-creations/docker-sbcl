@@ -24,15 +24,53 @@ function ensure_ownership () {
 ensure_ownership /opt/quicklisp
 ensure_ownership /cache
 
-ARGS=""
-read -ra args <<< "$@"
+runtime=()
+toplevel=()
+user=()
 
-if [ ${#args} -gt 0 ] ; then
-    echo Arguments:
-    for a in "${args[@]}"; do
-        echo     $a
-    done
+if [ $# -gt 0 ] ; then
+  push_runtime=0
+  push_toplevel=0
+  for a in "$@"; do
+      if [[ $push_runtime == 1 ]] ; then
+        # the current $a belongs to a previous option and is pushed onto the runtime array
+        runtime=("${runtime[@]}" "$a")
+        push_runtime=0
+        continue
+      elif [[ $push_toplevel == 1 ]] ; then
+        # the current $a belongs to a previous option and is pushed onto the toplevel array
+        # --script has an optional filename, so if the next arg is an option, we have to
+        # process it normally
+        if [[ $a =~ ^-- ]] ; then
+          echo "script followed by an option $a"
+        else
+          toplevel=("${toplevel[@]}" "$a")
+          push_toplevel=0
+          continue
+        fi
+      fi
+      case "$a" in
+          --help) runtime=("${runtime[@]}" "$a") ;;
+          --version) runtime=("${runtime[@]}" "$a") ;;
+          --core) runtime=("${runtime[@]}" "$a") ; push_runtime=1 ;;
+          --dynamic-space-size) runtime=("${runtime[@]}" "$a") ; push_runtime=1 ;;
+          --control-stack-size) runtime=("${runtime[@]}" "$a") ; push_runtime=1 ;;
+          --sysinit) toplevel=("${toplevel[@]}" "$a") ; push_toplevel=1 ;;
+          --userinit) toplevel=("${toplevel[@]}" "$a") ; push_toplevel=1 ;;
+          --no-sysinit) toplevel=("${toplevel[@]}" "$a") ;;
+          --no-userinit) toplevel=("${toplevel[@]}" "$a") ;;
+          --disable-debugger) toplevel=("${toplevel[@]}" "$a") ;;
+          --noprint) toplevel=("${toplevel[@]}" "$a") ;;
+          --script) toplevel=("${toplevel[@]}" "$a") ; push_toplevel=1 ;;
+          --quit) toplevel=("${toplevel[@]}" "$a") ;;
+          --non-interactive) toplevel=("${toplevel[@]}" "$a") ;;
+          --eval) toplevel=("${toplevel[@]}" "$a") ; push_toplevel=1 ;;
+          --load) toplevel=("${toplevel[@]}" "$a") ; push_toplevel=1 ;;
+          *) user=("${user[@]}" "$a") ;;
+      esac
+  done
 fi
+
 
 cat <<EOF
 
@@ -46,4 +84,4 @@ https://github.com/dimitri/pgloader/wiki/Running-in-Docker-%28SBCL-warning%29
 EOF
 
 
-exec gosu $RUN_AS rlwrap sbcl-binary --load /opt/quicklisp/setup.lisp "$@"
+exec gosu $RUN_AS rlwrap sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"
