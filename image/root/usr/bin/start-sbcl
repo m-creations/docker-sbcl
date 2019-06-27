@@ -34,8 +34,10 @@ if [ $# -gt 0 ] ; then
   push_runtime=0
   push_toplevel=0
   if [[ "$1" == "---" ]] ; then
-    printf "\nNot starting SBCL but running your command after '---'which is\n\n$@\n\n"
     shift
+    printf "\nNot starting SBCL but running your command after '---':\n\n"
+    echo "$@"
+    echo
     exec gosu $RUN_AS "$@"
     exit $?
   fi

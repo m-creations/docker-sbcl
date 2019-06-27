@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certif
     apt-key add /tmp/launchpad-ppa-gpg.key &&\
     apt-get update &&\
     apt-get install -y --no-install-recommends sbcl=$SBCL_VERSION \
+            pkg-config \
+            g++ \
             gnupg \
             gosu \
             libffi6 libffi-dev \
@@ -36,7 +38,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certif
             libuv1 libuv1-dev \
             patch \
             rlwrap \
-            wget &&\
+            wget \
+            zlib1g zlib1g-dev &&\
     cd ~ &&\
     printf "\n\nFinished installing SBCL. Now it's time for Quicklisp.\n\n" &&\
     wget -O /tmp/quicklisp.lisp https://beta.quicklisp.org/quicklisp.lisp &&\
