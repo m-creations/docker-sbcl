@@ -21,8 +21,10 @@ function ensure_ownership () {
     fi
 }
 
-ensure_ownership /opt/quicklisp
-ensure_ownership /cache
+ensure_ownership /opt/quicklisp/
+ensure_ownership /cache/
+
+# we split the command line options into runtime, toplevel and user options
 
 runtime=()
 toplevel=()
@@ -31,6 +33,13 @@ user=()
 if [ $# -gt 0 ] ; then
   push_runtime=0
   push_toplevel=0
+  if [[ "$1" == "---" ]] ; then
+    printf "\nNot starting SBCL but running your command after '---'which is\n\n$@\n\n"
+    shift
+    exec gosu $RUN_AS "$@"
+    exit $?
+  fi
+
   for a in "$@"; do
       if [[ $push_runtime == 1 ]] ; then
         # the current $a belongs to a previous option and is pushed onto the runtime array
@@ -70,18 +79,5 @@ if [ $# -gt 0 ] ; then
       esac
   done
 fi
-
-
-cat <<EOF
-
-In our experience, you can safely ignore the following warning about
-personality flags, if your code works in this Docker image.
-
-You can read more about it at
-
-https://github.com/dimitri/pgloader/wiki/Running-in-Docker-%28SBCL-warning%29
-
-EOF
-
 
 exec gosu $RUN_AS rlwrap sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"

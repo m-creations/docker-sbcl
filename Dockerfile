@@ -1,79 +1,51 @@
 ## -*- docker-image-name: "mcreations/sbcl" -*-
 
-FROM mcreations/openwrt-x64
+FROM ubuntu:bionic
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
-ENV SBCL_VERSION 1.4.11.mc1-2~bionic
+ENV SBCL_VERSION 2:1.5.2.mc1-1~bionic+1
 
-ENV DOWNLOAD_URL https://launchpad.net/~darabi/+archive/ubuntu/lisp/+files
-
-ENV DOWNLOAD_PACKAGE sbcl_${SBCL_VERSION}_amd64.deb
-
-ENV SHA256_SUM 8a6f665e1dfee384fbec4fa0a957533c79ff441444e691738be3f3fa5237d8eb
-
-ENV QUICKLISP_HOME /opt/quicklisp
-
-ENV QUICKLISP_VERSION 2018-08-31
+ENV QUICKLISP_VERSION 2019-05-21
 
 ENV MCREATIONS_DIST_VERSION 2018.07.24_10-53-37-GMT
 
+ENV QUICKLISP_HOME /opt/quicklisp
+
 ENV XDG_CACHE_HOME /cache
 
-ENV GOSU_VERSION 1.10
-
 ENV CC gcc
+
+ENV DEBIAN_FRONTEND noninteractive
 
 # userid:groupid to run sbcl with
 ENV RUN_AS 1000:1000
 
 # contains the start-sbcl script and a
 # patch for quicklisp-client's mtime handling
-ADD image/root/ /
+ADD image/root/tmp/* /tmp/
+ADD image/root/usr/bin/* /usr/bin/
 
-RUN opkg update &&\
-    opkg install --force-overwrite \
-         ar \
-         coreutils-id \
-         coreutils-sha256sum \
-         coreutils-stat \
-         gcc \
-         graphviz \
-         libffi libffi-dev \
-         libfixposix libfixposix-dev \
-         libuv libuv-dev \
-         make \
-         patch \
-         rlwrap \
-         shadow-groupadd \
-         shadow-su \
-         shadow-useradd \
-         tar \
-         xz \
-         zoneinfo-core &&\
-    rm /etc/localtime &&\
-    ln -s /usr/share/zoneinfo/UTC /etc/localtime &&\
-    mkdir /home &&\
-    cd /tmp &&\
-    chmod 1777 . &&\
-    wget -O gosu --progress=dot:giga "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" &&\
-    chmod a+x gosu &&\
-    mv gosu /usr/bin &&\
-    wget --progress=dot:giga $DOWNLOAD_URL/$DOWNLOAD_PACKAGE &&\
-    echo "$SHA256_SUM $DOWNLOAD_PACKAGE" | sha256sum -c &&\
-    mkdir sbcl-unpack && cd sbcl-unpack &&\
-    ar x ../$DOWNLOAD_PACKAGE &&\
-    tar xfvJ /tmp/sbcl-unpack/data.tar.xz -C / &&\
-    rm -rf /usr/share/{man,doc,lintian,binfmts} &&\
-    rm -rf /tmp/sbcl* &&\
-    rm /tmp/opkg-lists/* &&\
+RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certificates &&\
+    echo "deb http://ppa.launchpad.net/darabi/lisp/ubuntu bionic main" > /etc/apt/sources.list.d/darabi-lisp.list &&\
+    apt-key add /tmp/launchpad-ppa-gpg.key &&\
+    apt-get update &&\
+    apt-get install -y --no-install-recommends sbcl=$SBCL_VERSION \
+            gnupg \
+            gosu \
+            libffi6 libffi-dev \
+            libfixposix3 libfixposix-dev \
+            libgvc6 libgraphviz-dev \
+            libuv1 libuv1-dev \
+            patch \
+            rlwrap \
+            wget &&\
     cd ~ &&\
-    echo "Finished installing SBCL. Now it's time for Quicklisp." &&\
+    printf "\n\nFinished installing SBCL. Now it's time for Quicklisp.\n\n" &&\
     wget -O /tmp/quicklisp.lisp https://beta.quicklisp.org/quicklisp.lisp &&\
-    mkdir /opt &&\
+    mkdir -p /opt &&\
     mkdir -p /common-lisp &&\
     mkdir -p /usr/share/common-lisp  &&\
     mkdir -p $XDG_CACHE_HOME &&\
-    ln -s /common-lisp /usr/share/common-lisp/source &&\
     echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)' &&\
     echo | sbcl --load /opt/quicklisp/setup.lisp --eval "(ql-dist:install-dist \"http://beta.quicklisp.org/dist/quicklisp/$QUICKLISP_VERSION/distinfo.txt\" :replace t)" \
          --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"quicklisp\"))))" &&\
