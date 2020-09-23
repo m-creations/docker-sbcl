@@ -3,7 +3,7 @@
 FROM ubuntu:bionic
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
-ENV SBCL_VERSION 2:1.5.2.mc1-1~bionic+1
+ENV SBCL_VERSION 2:2.0.1.mc4-1~bionic+1
 
 ENV QUICKLISP_VERSION 2019-05-21
 
