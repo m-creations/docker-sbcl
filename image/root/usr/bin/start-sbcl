@@ -82,4 +82,13 @@ if [ $# -gt 0 ] ; then
   done
 fi
 
-exec gosu $RUN_AS rlwrap sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"
+# Use readline wrapper but test first, if it can run
+RLWRAP=rlwrap
+
+$RLWRAP echo
+
+if [ "$?" != "0" ] ; then
+    unset RLWRAP
+fi
+
+exec gosu $RUN_AS $RLWRAP sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"
