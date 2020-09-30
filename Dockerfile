@@ -20,8 +20,8 @@ ENV DEBIAN_FRONTEND noninteractive
 # userid:groupid to run sbcl with
 ENV RUN_AS 1000:1000
 
-# contains the start-sbcl script and a
-# patch for quicklisp-client's mtime handling
+# contains the start-sbcl script and a patch for quicklisp-client's
+# mtime handling when unpacking tar files
 ADD image/root/tmp/* /tmp/
 ADD image/root/usr/bin/* /usr/bin/
 
