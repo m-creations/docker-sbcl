@@ -5,7 +5,7 @@ MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
 ENV SBCL_VERSION 2:2.0.10.mc1-1~bionic+3
 
-ENV QUICKLISP_VERSION 2019-05-21
+ENV QUICKLISP_VERSION 2020-10-16
 
 ENV QUICKLISP_HOME /opt/quicklisp
 
