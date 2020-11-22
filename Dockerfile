@@ -56,6 +56,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certif
          --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"m-creations\"))))" &&\
     cd /opt/quicklisp &&\
     patch -p 1 < /tmp/001-minitar-set-file-mtime.patch &&\
+    chgrp -R 0 ${QUICKLISP_HOME} &&\
+    chgrp -R 0 ${XDG_CACHE_HOME} &&\
+    chmod -R g=u /etc/passwd ${QUICKLISP_HOME} ${XDG_CACHE_HOME} &&\
     mv /usr/bin/sbcl /usr/bin/sbcl-binary &&\
     mv /usr/bin/start-sbcl /usr/bin/sbcl
 
