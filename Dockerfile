@@ -50,6 +50,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certif
     echo | sbcl --load /tmp/quicklisp.lisp --eval '(quicklisp-quickstart:install :path "/opt/quicklisp")' --eval '(quicklisp:add-to-init-file)' --eval '(sb-ext:quit)' &&\
     cd /opt/quicklisp &&\
     patch -p 1 < /tmp/001-minitar-set-file-mtime.patch &&\
+    chgrp -R 0 ${QUICKLISP_HOME} &&\
+    chgrp -R 0 ${XDG_CACHE_HOME} &&\
+    chmod -R g=u /etc/passwd ${QUICKLISP_HOME} ${XDG_CACHE_HOME} &&\
     mv /usr/bin/sbcl /usr/bin/sbcl-binary &&\
     mv /usr/bin/start-sbcl /usr/bin/sbcl
 
