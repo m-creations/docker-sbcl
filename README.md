@@ -22,21 +22,34 @@ Sources can be mounted into the image into /common-lisp.
 
 Compiled files are cached in the directory /cache.
 
-The userid and groupid of the sbcl process can be specified explicitly.
+The userid of the sbcl process can be specified explicitly, groupid
+will be 0 (= root).
 
 How to use
 ----------
 
-We assume that you keep your own source files in `~/common-lisp` and
-the cache location is the default one `~/.cache`. Then you can use the
+To have a consistent situation inside the container and on the host,
+on our development machines, we install Quicklisp in `/opt/quicklisp`
+(and set the env var `QUICKLISP_HOME`). We keep our source files in
+`/common-lisp` (with a symbolic link in `~/common-lisp` and the cache
+location is `/cache` (with a link to `~/.cache`). Then you can use the
 following command
 
 ```
-docker run -it -v ~/common-lisp:/common-lisp -v ~/.cache:/cache mcreations/sbcl
+docker run -it -v /common-lisp:/common-lisp -v /cache:/cache mcreations/sbcl
 ```
 
-It is possible to override the quicklisp installation inside the
-container with the one which you have (default location `~/quicklisp`):
+But it is perfectly possible to mount the usual locations of those
+dirs into the container image:
+
+```
+docker run -it -v $HOME/common-lisp:/common-lisp -v $HOME/.cache:/cache mcreations/sbcl
+```
+
+
+It is of course possible to override the quicklisp installation inside
+the container with the one which you have (e.g. from location
+`~/quicklisp`):
 
 ```
 docker run -it -v ~/quicklisp:/opt/quicklisp -v ~/common-lisp:/common-lisp -v ~/.cache:/cache mcreations/sbcl
@@ -45,24 +58,32 @@ docker run -it -v ~/quicklisp:/opt/quicklisp -v ~/common-lisp:/common-lisp -v ~/
 User ID and Group ID
 --------------------
 
-The sbcl process inside the container runs with UID 1000 and GID 1000.
-If you specify host volumes to be mounted inside the container, then
-you should set the env var `RUN_AS` to your own UID and GID. The files
-which are created by sbcl will then have the correct user and group:
+The sbcl process inside the container runs with UID 1000 (user name
+'lisp') and GID 0.  If you specify host volumes to be mounted inside
+the container, then you should set the env var `RUN_AS` to your own
+UID. The files which are created by sbcl will then have the correct
+user and group:
 
 ```
-docker run -it -e RUN_AS=`id -u`:`id -g` -v ~/quicklisp:/opt/quicklisp -v ~/common-lisp:/common-lisp -v ~/.cache:/cache mcreations/sbcl
+docker run -it -e RUN_AS=`id -u` -v ~/common-lisp:/common-lisp -v ~/.cache:/cache mcreations/sbcl
 ```
 
-During startup, the startup script modifies owner and group of the directories
+These directories have gid 0 and are group-writable inside the container:
     
 - /opt/quicklisp
+- /common-lisp
 - /cache
 
-to match the value of `RUN_AS`.
+so, when you mount host volumes, make sure they are either writable by
+the UID in `RUN_AS` or by group root.
 
-Note that this will take quite some time, so you should always run the
-image with the same `RUN_AS` value (cf. above).
+Environment variables
+---------------------
+
+- `RUN_AS`: see section 'User ID and Group ID'
+
+- `QL_VERBOSE`: if set, Quicklisp loading will be verbose (compile
+  messages and warnings instead of printing dots to signify progress)
 
 Readline support
 ----------------

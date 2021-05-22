@@ -5,24 +5,25 @@
 IFS=':' read -ra user_group <<< "$RUN_AS"
 
 userid=${user_group[0]}
-groupid=${user_group[1]}
 
-# Add the user, if s/he does not exist (we do NOT check the group!)
+# Add the user, if s/he does not exist (we alway use group 0 = root)
 
 if ! id -nu $userid &> /dev/null ; then
-    groupadd -g $groupid lisp
-    useradd -g $groupid -u $userid -m lisp
+    useradd -g 0 -u $userid -m lisp
 fi
 
-function ensure_ownership () {
-    local dir=$1
-    if [[ "$(stat -c '%u' $dir)" != $userid || "$(stat -c '%g' $dir)" != $groupid ]] ; then
-        chown $userid:$groupid $dir -R
-    fi
-}
+# create .sbclrc
+cat <<EOF > /home/lisp/.sbclrc
+(require 'asdf)
 
-ensure_ownership /opt/quicklisp/
-ensure_ownership /cache/
+(push "node_modules" asdf/source-registry:*default-source-registry-exclusions*)
+
+#-quicklisp
+(load "/opt/quicklisp/setup.lisp")
+
+(when (sb-posix:getenv "QL_VERBOSE")
+  (setf quicklisp:*quickload-verbose* t))
+EOF
 
 # we split the command line options into runtime, toplevel and user options
 
@@ -38,7 +39,7 @@ if [ $# -gt 0 ] ; then
     printf "\nNot starting SBCL but running your command after '---':\n\n"
     echo "$@"
     echo
-    exec gosu $RUN_AS "$@"
+    exec gosu $userid:0 "$@"
     exit $?
   fi
 
@@ -91,4 +92,4 @@ if [ "$?" != "0" ] ; then
     unset RLWRAP
 fi
 
-exec gosu $RUN_AS $RLWRAP sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"
+exec gosu $userid:0 $RLWRAP sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"
