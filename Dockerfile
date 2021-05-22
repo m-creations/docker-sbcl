@@ -3,9 +3,9 @@
 FROM ubuntu:bionic
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
-ENV SBCL_VERSION 2:2.0.10.mc1-1~bionic+3
+ENV SBCL_VERSION 2:2.1.1.mc2-4~bionic+1
 
-ENV QUICKLISP_VERSION 2020-10-16
+ENV QUICKLISP_VERSION 2020-04-11
 
 ENV QUICKLISP_HOME /opt/quicklisp
 
