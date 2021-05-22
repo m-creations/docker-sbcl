@@ -9,14 +9,18 @@ ENV QUICKLISP_VERSION 2020-10-16
 
 ENV QUICKLISP_HOME /opt/quicklisp
 
+# if changing this, check the whole config, as '/common-lisp' is
+# hard-coded below and in /usr/bin/start-sbcl
+ENV CL_SOURCE_REGISTRY '(:source-registry (:tree "/common-lisp") :inherit-configuration)'
+
 ENV XDG_CACHE_HOME /cache
 
 ENV CC gcc
 
 ENV DEBIAN_FRONTEND noninteractive
 
-# userid:groupid to run sbcl with
-ENV RUN_AS 1000:1000
+# userid to run sbcl with (group id will be 0 which corresponds to the setting on OpenShift)
+ENV RUN_AS 1000
 
 # contains the start-sbcl script and a
 # patch for quicklisp-client's mtime handling
