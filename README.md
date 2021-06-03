@@ -1,8 +1,9 @@
 docker-sbcl
 ===========
 
-An image based on [OpenWrt](http://openwrt.org) x86_64 which runs
-[SBCL (Steel Bank Common Lisp)](http://sbcl.org).
+An image based on Debian + [MetaCall](https://metacall.io/) x86_64
+runtime Docker image which runs [SBCL (Steel Bank Common
+Lisp)](http://sbcl.org).
 
 [Quicklisp](https://quicklisp.org) is installed in /opt/quicklisp. We provide
 different versions (tags) for different distributions of Quicklisp:
@@ -22,8 +23,8 @@ Sources can be mounted into the image into /common-lisp.
 
 Compiled files are cached in the directory /cache.
 
-The userid of the sbcl process can be specified explicitly, groupid
-will be 0 (= root).
+The userid of the sbcl process can be specified explicitly (default is
+1000), groupid will be 0 (= root).
 
 How to use
 ----------
