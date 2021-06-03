@@ -1,6 +1,6 @@
 ## -*- docker-image-name: "mcreations/sbcl" -*-
 
-FROM ubuntu:bionic
+FROM registry.gitlab.com/darabi/metacall/metacall-runtime:latest
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
 ENV SBCL_VERSION 2:2.1.1.mc2-4~bionic+1
