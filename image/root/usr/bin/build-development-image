@@ -1,0 +1,235 @@
+#!/bin/sh
+#| -*- mode: lisp; coding: utf-8-unix -*-
+
+DWIM_WORKSPACE=${DWIM_WORKSPACE:-/common-lisp}
+
+LISP=sbcl-binary
+
+export DWIM_SYSTEM_NAME_SUBSTRING=$1
+DWIM_MAXIMUM_MEMORY_SIZE=4096
+
+cd "${DWIM_WORKSPACE}"
+
+echo "*** "`date`" Building development image for ${DWIM_SYSTEM_NAME_SUBSTRING} from workspace '${DWIM_WORKSPACE}'"
+
+BUILD_LOG_FILE="/tmp/${DWIM_SYSTEM_NAME_SUBSTRING}.build-log"
+
+# we should leave this up to the user...
+#export CL_SOURCE_REGISTRY="(:source-registry (:also-exclude \"sbcl\" \"disabled\" \"global\") (:tree \"${DWIM_WORKSPACE}\") :inherit-configuration)"
+#export ASDF_OUTPUT_TRANSLATIONS="(:output-translations (\"${DWIM_WORKSPACE}\" (\"${DWIM_INSTALL_PATH}/.cache/common-lisp/\" :implementation)) :ignore-inherited-configuration)"
+
+# "call" the lisp part below.
+# NOTE: (require :asdf) does not initiate asdf self-upgrade; that's why we also asdf:load-system it again.
+# NOTE: --script implies --no-userinit (i.e. no quicklisp from .sbclrc), so we use a different trick here to skip the first line.
+exec ${LISP} --dynamic-space-size "${DWIM_MAXIMUM_MEMORY_SIZE}" --noinform --end-runtime-options \
+  --eval "(require :asdf)" --eval "(asdf:load-system :asdf)" \
+  --eval "(with-open-file (s \"${0}\" :element-type 'character) (read-line s) (load s))" \
+  --end-toplevel-options 2>&1 | tee ${BUILD_LOG_FILE}
+
+# optionally, after loading ASDF:
+# --eval "(ignore-errors (load (uiop:subpathname (user-homedir-pathname) \"quicklisp/setup.lisp\")))" \
+# --eval "(declaim (optimize debug))" \
+
+echo "*** "`date`" Finished building development image for ${DWIM_SYSTEM_NAME_SUBSTRING}"
+
+# let's quit the shell part before the shell interpreter runs on the lisp stuff below
+kill -INT $$
+
+# and from here follows the lisp part that gets "called" above |#
+
+(in-package :cl-user)
+
+(defpackage :build-tmp
+  (:use :common-lisp))
+
+(in-package :build-tmp)
+
+(format t "~2&Running on ~A ~A, using ASDF ~A, Quicklisp dist version ~A~%"
+        (lisp-implementation-type)
+        (lisp-implementation-version)
+        (asdf:asdf-version)
+        (or #+quicklisp (ql:dist-version "quicklisp")
+            "n/a"))
+
+;; KLUDGE for a quicklisp bug: it doesn't download :defsystem-depends-on dependencies,
+;; so we need to explicitly quickload it early on, before the project .asd's get loaded.
+;; for more details, see: https://github.com/quicklisp/quicklisp-client/pull/122
+#+quicklisp
+(ql:quickload :hu.dwim.asdf)
+
+(defun load-systems* (systems)
+  (let ((systems (if (listp systems)
+                     systems
+                     (list systems))))
+    #-quicklisp
+    (apply 'asdf:load-systems systems)
+    #+quicklisp
+    (ql:quickload systems :prompt nil :verbose t)))
+
+(defun maybe-find-system (name)
+  (flet ((try ()
+           (with-simple-restart (skip-system "Skip calling ~S on ~S" 'asdf:find-system name)
+             (asdf:find-system name nil))))
+    (or (try)
+        #+quicklisp
+        (progn
+          (let ((ql-system (ql-dist:find-system name)))
+            (when ql-system
+              (ql-dist:install ql-system)))
+          (try)))))
+
+;;; some duplicates, mostly from hu.dwim.asdf (somewhat modified)
+
+(defun %iterate-system-dependencies-1 (function system)
+  (check-type system asdf:system)
+  ;; NOTE: it's not clear how to iterate dependencies, see this old discussion:
+  ;; http://article.gmane.org/gmane.lisp.asdf.devel/3105
+  ;; although ASDF:COMPONENT-SIDEWAY-DEPENDENCIES might be newer than that discussion.
+  (dolist (dependency (asdf:component-sideway-dependencies system))
+    ;; NOTE: there may be dependencies here like this: (:VERSION :METATILITIES-BASE "0.6.6")
+    (when (consp dependency)
+      (case (first dependency)
+        (:version
+         (setf dependency (second dependency)))
+        ;; (:feature :sbcl (:require :sb-posix)) or (:feature :my-system :my-system) (seen in clon)
+        (:feature
+         (if (uiop:featurep (second dependency))
+           (setf dependency (if (consp (third dependency))
+                                (second (third dependency))
+                                (third dependency)))
+           (setf dependency :asdf)))
+        (t (error "Don't know how to interpret the following ASDF dependency specification: ~S" dependency))))
+    (setf dependency (maybe-find-system dependency))
+    (when dependency
+      (funcall function dependency))))
+
+(defun iterate-system-dependencies (function system &key (transitive nil))
+  (setf system (asdf:find-system system))
+  (if transitive
+      (let ((dependencies '()))
+        (labels ((recurse (system)
+                   (%iterate-system-dependencies-1 (lambda (dependency)
+                                                     (unless (member dependency dependencies)
+                                                       (push dependency dependencies)
+                                                       (recurse dependency)))
+                                                   system)))
+          (recurse system)
+          (map nil function dependencies)))
+      (%iterate-system-dependencies-1 function system))
+  (values))
+
+(defun map-system-dependencies (function system &key (transitive nil))
+  (check-type system asdf:system)
+  (let ((result '()))
+    (iterate-system-dependencies (lambda (dependency)
+                                   (push (funcall function dependency) result))
+                                 system
+                                 :transitive transitive)
+    result))
+
+(defun map-visible-asd-files (visitor)
+  (loop
+    :for asd-file :being :the :hash-value :of asdf::*source-registry*
+    :do (funcall visitor asd-file)))
+
+(defun find-all-systems-with-prefix (name-target)
+  (check-type name-target string)
+  (let ((systems (list)))
+    ;; NOTE: asdf:map-systems won't work here, because it only visits the already loaded systems
+    (map-visible-asd-files
+     (lambda (file)
+       (let ((name (pathname-name file)))
+         (when (eql (search name-target name)
+                    0)
+           (let ((system (maybe-find-system name)))
+             (when system
+               (pushnew system systems)))))))
+    systems))
+
+(defun collect-to-be-loaded-systems-for-development-build (name-target)
+  "Collects the transitive closure of system names that are dependencies of all the systems whose name starts with NAME-TARGET."
+  (let ((target-systems (find-all-systems-with-prefix name-target))
+        (to-be-loaded-systems (make-hash-table :test 'equal))
+        (level 0))
+    ;; (format t "~%;;; will load all the dependencies of the following systems:~&   ~A~%" (mapcar 'asdf:primary-system-name target-systems))
+    (dolist (system target-systems)
+      (labels ((recurse (system)
+                 (let ((system-name (asdf:component-name system)))
+                   (unless (or (search name-target system-name)
+                               (gethash system-name to-be-loaded-systems))
+                     (with-simple-restart (skip-system "Skip finding system ~S" system-name)
+                       ;; (princ (make-string (* level 2) :initial-element #\Space))
+                       ;; (format t "~S~%" system-name)
+                       (setf (gethash system-name to-be-loaded-systems) system)
+                       (incf level)
+                       (map-system-dependencies #'recurse system)
+                       (decf level))))))
+        (map-system-dependencies #'recurse system)))
+    to-be-loaded-systems))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; the script begins here
+;;;
+
+;; so that we can see (def function name ...) in the compile output
+#+sbcl
+(setf sb-ext:*compiler-print-variable-alist*
+      '((*print-length* . 3)
+        (*print-level* . 2)
+        (*print-pretty* . nil)))
+
+;; this tells ASDF to signal a full error if there are any warnings at compile and/or load.
+;;(asdf:enable-deferred-warnings-check)
+
+(let ((sbcl-home (sb-int:sbcl-homedir-pathname)))
+  (format t ";;; capturing (SB-INT:SBCL-HOMEDIR-PATHNAME) at build time: ~S~%" sbcl-home)
+  (assert (probe-file sbcl-home))
+  (defun build-restore-hook/set-sbcl-home ()
+    (unless (uiop:getenv "SBCL_HOME")
+      #+#.(hu.dwim.asdf::if-symbol-exists "SB-SYS" "*SBCL-HOMEDIR-PATHNAME*")
+      (progn
+        (format t ";;; BUILD-RESTORE-HOOK/SET-SBCL-HOME is restoring the captured sbcl home to ~S; currently (sb-int:sbcl-homedir-pathname) => ~S~%"
+                sbcl-home
+                (sb-int:sbcl-homedir-pathname))
+        (setf sb-sys::*sbcl-homedir-pathname* sbcl-home)
+        (format t ";;; after restore (sb-int:sbcl-homedir-pathname) => ~S~%"
+                (sb-int:sbcl-homedir-pathname)))
+      #-#.(hu.dwim.asdf::if-symbol-exists "SB-SYS" "*SBCL-HOMEDIR-PATHNAME*")
+      (setf (uiop:getenv "SBCL_HOME") (namestring sbcl-home)))))
+
+(uiop:register-image-restore-hook 'build-restore-hook/set-sbcl-home)
+
+(restart-bind
+    ((:start-swank-server
+      (lambda ()
+        (load-systems* :hu.dwim.util/error-handling+swank)
+        (eval (read-from-string "(hu.dwim.util:start-swank-server 4005)")))
+       :report-function (lambda (stream)
+                          (format stream "Start Swank server on port 4005"))))
+ (let* ((target-system-name (or (uiop:getenv "DWIM_SYSTEM_NAME_SUBSTRING")
+                                (error "DWIM_SYSTEM_NAME_SUBSTRING is not defined")))
+        (to-be-loaded-systems (collect-to-be-loaded-systems-for-development-build target-system-name))
+        (excluded-systems '("swank"))
+        (output-filename (merge-pathnames
+                          (concatenate 'string
+                                       target-system-name
+                                       "_development")
+                          ;; store under ~/.cache/common-lisp/sbcl-1.0.43.25-linux-x86-64/
+                          (asdf:apply-output-translations "/"))))
+   (dolist (excluded-system excluded-systems)
+     (remhash excluded-system to-be-loaded-systems))
+   (let ((to-be-loaded-systems (sort (loop
+                                       :for k :being :the :hash-keys :of to-be-loaded-systems
+                                       :collect k)
+                                     'string<)))
+     (unless to-be-loaded-systems (error "Cannot find any systems to load for ~A" target-system-name))
+     (format t "~%;;; loading the following systems into this image:~&   ~A~%" to-be-loaded-systems)
+     (load-systems* to-be-loaded-systems))
+
+   (setf uiop:*image-entry-point* 'sb-impl::toplevel-init)
+   (format t "~%;;; saving image to: ~S~%" output-filename)
+   ;; TODO delme
+   (format t "~%sudo setcap 'cap_net_raw,cap_net_admin+eip' ~S~%~%" (namestring output-filename))
+   (in-package :cl-user)
+   (delete-package :build-tmp)
+   (uiop:dump-image build-tmp::output-filename :executable t :compression nil)))
