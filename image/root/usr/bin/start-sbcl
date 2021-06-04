@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # set -x
+umask 0002
 
 IFS=':' read -ra user_group <<< "$RUN_AS"
 
@@ -12,11 +13,19 @@ if ! id -nu $userid &> /dev/null ; then
     useradd -g 0 -u $userid -m lisp
 fi
 
+# if we are running as uid 1000, then we don't need to use GOSU
+if [ $EUID != $userid ] ; then
+    GOSU="gosu $userid:0"
+else
+    GOSU=""
+fi
+
 # create .sbclrc
 cat <<EOF > /home/lisp/.sbclrc
 (require 'asdf)
 
 (push "node_modules" asdf/source-registry:*default-source-registry-exclusions*)
+(push ".npm" asdf/source-registry:*default-source-registry-exclusions*)
 
 #-quicklisp
 (load "/opt/quicklisp/setup.lisp")
@@ -24,6 +33,8 @@ cat <<EOF > /home/lisp/.sbclrc
 (when (sb-posix:getenv "QL_VERBOSE")
   (setf quicklisp:*quickload-verbose* t))
 EOF
+
+chown 1000:0 /home/lisp/.sbclrc
 
 # we split the command line options into runtime, toplevel and user options
 
@@ -39,7 +50,7 @@ if [ $# -gt 0 ] ; then
     printf "\nNot starting SBCL but running your command after '---':\n\n"
     echo "$@"
     echo
-    exec gosu $userid:0 "$@"
+    exec $GOSU "$@"
     exit $?
   fi
 
@@ -92,4 +103,4 @@ if [ "$?" != "0" ] ; then
     unset RLWRAP
 fi
 
-exec gosu $userid:0 $RLWRAP sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"
+exec $GOSU $RLWRAP sbcl-binary "${runtime[@]}" --load /opt/quicklisp/setup.lisp "${toplevel[@]}" "${user[@]}"
