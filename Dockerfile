@@ -58,6 +58,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certif
          --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"quicklisp\"))))" &&\
     echo | sbcl --load /opt/quicklisp/setup.lisp --eval "(ql-dist:install-dist \"http://ql.m-creations.net/m-creations/$MCREATIONS_DIST_VERSION/distinfo.txt\" :replace t)" \
          --eval "(mapcar #'ql-dist:ensure-local-archive-file (mapcar #'ql-dist:release (ql-dist:provided-systems (ql-dist:find-dist \"m-creations\"))))" &&\
+    echo | sbcl --eval '(ql:quickload :swank)' &&\
     cd /opt/quicklisp &&\
     patch -p 1 < /tmp/001-minitar-set-file-mtime.patch &&\
     chgrp -R 0 ${QUICKLISP_HOME} &&\
