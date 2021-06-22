@@ -65,7 +65,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certif
     chgrp -R 0 ${XDG_CACHE_HOME} &&\
     chmod -R g=u /etc/passwd ${QUICKLISP_HOME} ${XDG_CACHE_HOME} &&\
     mv /usr/bin/sbcl /usr/bin/sbcl-binary &&\
-    mv /usr/bin/start-sbcl /usr/bin/sbcl
+    mv /usr/bin/start-sbcl /usr/bin/sbcl &&\
+    printf "\n\nModifying MetaCall global configuration\n\n" &&\
+    echo '{ "log_level": "Debug" }' > /usr/local/share/metacall/configurations/global.json
 
 
 ENTRYPOINT ["sbcl"]
