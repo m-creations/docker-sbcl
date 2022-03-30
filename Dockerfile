@@ -1,11 +1,15 @@
 ## -*- docker-image-name: "mcreations/sbcl" -*-
 
-FROM registry.gitlab.com/darabi/metacall/metacall-runtime:latest
+# MetaCall binary build
+FROM registry.gitlab.com/darabi/metacall-nodejs-builder:0.5.17.2 AS metacall
+
+FROM debian:stable-slim
+
 MAINTAINER Kambiz Darabi <darabi@m-creations.net>
 
-ENV SBCL_VERSION 2:2.1.1.mc2-4~bionic+1
+ENV SBCL_VERSION 2:2.1.1-2
 
-ENV QUICKLISP_VERSION 2021-04-11
+ENV QUICKLISP_VERSION 2022-02-20
 
 ENV MCREATIONS_DIST_VERSION 2021-05-22-1215
 
@@ -29,16 +33,20 @@ ENV RUN_AS 1000
 ADD image/root/tmp/* /tmp/
 ADD image/root/usr/bin/* /usr/bin/
 
+# Copy MetaCall libraries
+COPY --from=metacall /usr/local/ /usr/local/
+
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certificates &&\
-    echo "deb http://ppa.launchpad.net/darabi/lisp/ubuntu bionic main" > /etc/apt/sources.list.d/darabi-lisp.list &&\
-    apt-key add /tmp/launchpad-ppa-gpg.key &&\
-    apt-get update &&\
-    apt-get install -y --no-install-recommends sbcl=$SBCL_VERSION \
+    # echo "deb http://ppa.launchpad.net/darabi/lisp/ubuntu bionic main" > /etc/apt/sources.list.d/darabi-lisp.list &&\
+    # apt-key add /tmp/launchpad-ppa-gpg.key &&\
+    # apt-get update &&\
+    # apt-get install -y --no-install-recommends sbcl=$SBCL_VERSION \
+    apt-get install -y --no-install-recommends sbcl \
             pkg-config \
             g++ \
             gnupg \
             gosu \
-            libffi6 libffi-dev \
+            libffi7 libffi-dev \
             libfixposix3 libfixposix-dev \
             libgvc6 libgraphviz-dev \
             libuv1 libuv1-dev \
