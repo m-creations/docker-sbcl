@@ -49,9 +49,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certif
             libffi7 libffi-dev \
             libfixposix3 libfixposix-dev \
             libgvc6 libgraphviz-dev \
+            libnode72 \
             libuv1 libuv1-dev \
             patch \
-            rlwrap \
             wget \
             zlib1g zlib1g-dev &&\
     cd ~ &&\
